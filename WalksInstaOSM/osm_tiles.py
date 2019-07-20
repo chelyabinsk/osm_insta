@@ -2,6 +2,7 @@ import requests
 import math
 from PIL import Image, ImageDraw
 import os 
+import json
 
 class Tiles():
     def __init__(self, startPos, endPos, deltas, zoom):
@@ -17,6 +18,15 @@ class Tiles():
       xtile = int((lon_deg + 180.0) / 360.0 * n)
       ytile = int((1.0 - math.log(math.tan(lat_rad) + (1 / math.cos(lat_rad))) / math.pi) / 2.0 * n)
       return (xtile, ytile)
+   
+    def deg2num2(self, lat_deg, lon_deg, zoom):
+      lat_rad = math.radians(lat_deg)
+      n = 2.0 ** zoom
+      xtile = int((lon_deg + 180.0) / 360.0 * n)
+      x_ = (lon_deg + 180.0) / 360.0 * n - xtile
+      ytile = int((1.0 - math.log(math.tan(lat_rad) + (1 / math.cos(lat_rad))) / math.pi) / 2.0 * n)
+      y_ = (1.0 - math.log(math.tan(lat_rad) + (1 / math.cos(lat_rad))) / math.pi) / 2.0 * n - ytile
+      return (xtile, ytile,x_,y_)
     
     def num2deg(self, xtile, ytile, zoom):
       n = 2.0 ** zoom
@@ -78,9 +88,9 @@ class Tiles():
     def pixel2longlat(self, pos):
         # Extract pixels
         x,y = pos
-        lat = (2.0*self.delta_lat/1080.0)*(x)+self.lat_deg - self.delta_lat
-        lon = (2.0*self.delta_long/1080.0)*(y)+self.lon_deg - self.delta_long
-        return (lat,lon)
+        xtile,ytile = self.xmin + x/256, self.ymin + y/256
+        
+        return (self.num2deg(xtile,ytile,self.zoom))
     
     def longlat2pixel(self, pos):
         """ 
@@ -88,17 +98,11 @@ class Tiles():
         """
         # Coordinate of the point
         lat, long = pos
-        # Image size is fixed to 1080x1080
-        w, h = (1279, 1023)
-        # Find corner degrees
-        lat_min,lon_min = self.num2deg(self.xmin,self.ymin,self.zoom)
-        lat_max,lon_max = self.num2deg(self.xmax,self.ymax,self.zoom)
-        lon_max += self.delta_long*1.4
-        lat_max -= self.delta_lat*0.04
-#        print(lat_min,lon_min,lat_max,lon_max)
-        x = (w/(lat_max-lat_min)*1.0)*(lat - (lat_min))
-#        y = (h/h_d)*(long - (self.lon_deg-self.delta_long))
-        y = (h/(lon_max-lon_min)*1.0)*(long - (lon_min))
+        
+        n = self.deg2num2(lat,long,self.zoom)
+        x = 256 * (n[0] - self.xmin) + n[2]*256
+        y = 256 * (n[1] - self.ymin) + n[3]*256
+        
         return (x,y)
         
     def addPoints2map(self, mapname, points, param = None):
@@ -106,10 +110,13 @@ class Tiles():
         Function to add points to the map
         """
         # Open output image
-        img = Image.open("o.png")
+        img = Image.open("o4.png")
         draw = ImageDraw.Draw(img)
-        draw.line(self.longlat2pixel((51.3821, -2.3578+0.001)) + self.longlat2pixel((51.3821, -2.3578)), width=5, fill=(0,0,255,100))
-        img.save("o3.png")
+        for point in points:
+            x,y = self.longlat2pixel([point[1],point[0]])
+            draw.line((x,y) + (x+1,y), width=5, fill = (0,100,100))
+        #draw.line(self.longlat2pixel((51.3821, -2.3578+0.001)) + self.longlat2pixel((51.3821, -2.3578)), width=5, fill=(0,0,255,100))
+        img.save(mapname)
     
     def retrieveDirectrions(self, start, end):
         """
@@ -117,8 +124,24 @@ class Tiles():
         on the map. I am going to use it to fill in the gaps in my travels
         All credit goes to the OSM directions.
         """
-        pass
-    
+        url = "https://routing.openstreetmap.de/routed-foot/route/v1/driving/{0},{1};{2},{3}?overview=false&geometries=polyline&steps=true"
+        url = url.format(start[1],start[0],end[1],end[0])
+        r = requests.get(url).json()
+        routes = r["routes"]
+        dist = routes[0]["distance"]
+        dur = routes[0]["duration"]
+        steps = routes[0]["legs"][0]["steps"]
+        # Go through the given JSON and extract location of each turn
+        locs = []  # List of locations
+        for step in steps:
+            for inter in step["intersections"]:
+                locs.append(inter["location"])
+            locs.append(step["maneuver"]["location"])
+        return locs
+        
+        #https://routing.openstreetmap.de/routed-foot/route/v1/driving/-2.3648278,51.3838674;-2.3626613616943364,51.386499401860114?overview=false&geometries=polyline&steps=true
+        #https://routing.openstreetmap.de/routed-foot/route/v1/driving/-2.3647764572097345,51.38379438500331;-2.3548,51.3812?overview=false&geometries=polyline&steps=true
+        #https://routing.openstreetmap.de/routed-foot/route/v1/driving/51.38379438500331,-2.3647764572097345;51.3812,-2.3548?overview=false&geometries=polyline&steps=true
     def findEndPoint(self):
         """
         Function to find valid end step
@@ -131,7 +154,7 @@ class Tiles():
         """
         # Find current position coordinate
         c_x, c_y = self.longlat2pixel((self.lat_deg,self.lon_deg))
-        # Find end position coordinate
+        # Find end position coordinate)
         f_x, f_y = self.longlat2pixel((self.end_lat, self.end_lon))
         # Find relative angle between two points
         theta = math.pi + math.acos((c_x-f_x)/math.sqrt((c_x-f_x)**2 + (c_y-f_y)**2.0))
@@ -163,6 +186,7 @@ class Tiles():
                 y = c_y + r_y*math.sin(theta + (i/n)*math.pi*2 * (-1)**i)
                 # Extract pixel's RGB components
                 r,g,b = rgb_img.getpixel((x,y))
+#                r,g,b = (0,0,0)
                 # Yellow A-road
                 drawDot = False
                 if(r == 252 and g== 214 and b == 164):
@@ -184,7 +208,7 @@ class Tiles():
                 # Pink A-road
                 elif(r == 249 and g == 178 and b == 156):
                     drawDot = True
-    #            drawDot  = True
+#                drawDot  = True
                 if(drawDot):
                     break
     #                print(x,y)
@@ -196,11 +220,44 @@ class Tiles():
         draw.line((c_x,c_y)+(c_x,c_y+5),width=20,fill=(0,0,255,0))
         draw.line((f_x,f_y)+(f_x,f_y+5),width=20,fill=(0,0,255,0))
         img.save("o4.png")
+        return (x,y)
+    
+    def drawPointOnMap(self,point):
+        """
+        Function to draw a point on the map given a long-lat
+        """
+        img = Image.open("o.png")
+        lat,lon = self.lat_deg, self.lon_deg
+        lat,lon = (51.3805, -2.3448)
+        n = self.deg2num2(lat,lon,self.zoom)
+        x_,y_ = n[2]*256, n[3]*256
+        x = 256 * (n[0] - self.xmin) + n[2]*256
+        y = 256 * (n[1] - self.ymin) + n[3]*256
+        draw = ImageDraw.Draw(img)
+        draw.line((x,y)+(x+1,y),width=10,fill=(0,0,0))
+        img.save("o3.png")
+#        print(lat,lon,x,y)
+        print(self.xmin,self.xmax,n)
+        
+    def updateMap(self):
+        # Find current end point
+        endpoint_c = self.findEndPoint()
+        # Destination deg
+        pos_d = self.pixel2longlat(endpoint_c)
+        # Current position deg
+        pos_c = self.lat_deg,self.lon_deg
+        print(pos_d,pos_c)
+        # Find directions between current and end point
+        steps = self.retrieveDirectrions(pos_c,pos_d)
+        # Plot the points on the map
+        self.addPoints2map("o4.png",steps)
+        
 
 if __name__ == '__main__':
     startPos = (51.3812, -2.3548)
     endPos = (51.3812, -2.3650)
     deltas = (0.01, 0.02)
+#    deltas = (0.001, 0.005)
     zoom = 15
     
     t = Tiles(startPos, endPos, deltas, zoom)
@@ -214,5 +271,6 @@ if __name__ == '__main__':
     b = a.resize((1080,1080),Image.ANTIALIAS)
     b.save("o2.png")
     #t.addPoints2map(1,1,1)
-    t.findEndPoint()
+    t.updateMap()
+    t.drawPointOnMap(0)
 #    print(t.longlat2pixel((51.3812,-2.3548)))
