@@ -62,7 +62,7 @@ class Tiles():
             for ytile in range(ymin,  ymax+1):
                 try:
                     imgurl=smurl.format(zoom, xtile, ytile)
-                    print("Opening: " + imgurl)
+#                    print("Opening: " + imgurl)
                     filepath = "tiles/{}_{}.png".format(xtile,ytile)
                     # Check if tile already exists
                     if(not os.path.isfile(filepath)):
@@ -112,9 +112,15 @@ class Tiles():
         # Open output image
         img = Image.open("o4.png")
         draw = ImageDraw.Draw(img)
-        for point in points:
+        for i in range(len(points)):
+            point = points[i]
             x,y = self.longlat2pixel([point[1],point[0]])
-            draw.line((x,y) + (x+1,y), width=5, fill = (0,100,100))
+            if(i == len(points) -1 ):
+                draw.line((x,y) + (x+1,y), width=5, fill = (0,0,255))
+            else:
+                point2 = points[i+1]
+                x2,y2 = self.longlat2pixel([point2[1],point2[0]])
+                draw.line((x,y)+(x2,y2), width=5, fill=(0,0,255))
         #draw.line(self.longlat2pixel((51.3821, -2.3578+0.001)) + self.longlat2pixel((51.3821, -2.3578)), width=5, fill=(0,0,255,100))
         img.save(mapname)
     
@@ -215,10 +221,10 @@ class Tiles():
         else:
             x,y = f_x, f_y
         draw = ImageDraw.Draw(img)    
-        draw.line((x,y)+(x+10,y+10),width=5,fill=(255,0,0,0))
+#        draw.line((x,y)+(x+10,y+10),width=5,fill=(255,0,0,0))
         
-        draw.line((c_x,c_y)+(c_x,c_y+5),width=20,fill=(0,0,255,0))
-        draw.line((f_x,f_y)+(f_x,f_y+5),width=20,fill=(0,0,255,0))
+#        draw.line((c_x,c_y)+(c_x,c_y+5),width=20,fill=(0,0,255,0))
+#        draw.line((f_x,f_y)+(f_x,f_y+5),width=20,fill=(0,0,255,0))
         img.save("o4.png")
         return (x,y)
     
@@ -235,9 +241,9 @@ class Tiles():
         y = 256 * (n[1] - self.ymin) + n[3]*256
         draw = ImageDraw.Draw(img)
         draw.line((x,y)+(x+1,y),width=10,fill=(0,0,0))
-        img.save("o3.png")
+#        img.save("o3.png")
 #        print(lat,lon,x,y)
-        print(self.xmin,self.xmax,n)
+#        print(self.xmin,self.xmax,n)
         
     def updateMap(self):
         # Find current end point
@@ -246,16 +252,19 @@ class Tiles():
         pos_d = self.pixel2longlat(endpoint_c)
         # Current position deg
         pos_c = self.lat_deg,self.lon_deg
-        print(pos_d,pos_c)
+#        print(pos_d,pos_c)
         # Find directions between current and end point
         steps = self.retrieveDirectrions(pos_c,pos_d)
         # Plot the points on the map
         self.addPoints2map("o4.png",steps)
+        # Plot historic travel in different colour
+        
+        # Add other fun stats
         
 
 if __name__ == '__main__':
     startPos = (51.3812, -2.3548)
-    endPos = (51.3812, -2.3650)
+    endPos = (51.3704,-2.3184)
     deltas = (0.01, 0.02)
 #    deltas = (0.001, 0.005)
     zoom = 15
@@ -269,8 +278,7 @@ if __name__ == '__main__':
 #    plt.show()
     a.save("o.png")
     b = a.resize((1080,1080),Image.ANTIALIAS)
-    b.save("o2.png")
+#    b.save("o2.png")
     #t.addPoints2map(1,1,1)
     t.updateMap()
-    t.drawPointOnMap(0)
 #    print(t.longlat2pixel((51.3812,-2.3548)))
