@@ -129,8 +129,8 @@ class Tiles():
         theta = math.asin((c_x-f_x)/math.sqrt((c_x-f_x)**2 + (c_y-f_y)**2.0))
         # Define starting searching radius
         r = 0.005  # ~1km
-        # Define initial number of point on the circle
-        n = 100.0
+        # Define initial number of points on the circle
+        n = 5000.0
         
         img = Image.open("o.png")
         r_x_, r_y_ = self.longlat2pixel((0,0))
@@ -141,7 +141,7 @@ class Tiles():
             draw = ImageDraw.Draw(img)
             x = c_x + r_x*math.cos(theta + i/n*math.pi*2)
             y = c_y + r_y*math.sin(theta + i/n*math.pi*2)
-            draw.line((x,y)+(x+10,y+10),width=10,fill=(255,0,0,0))
+            draw.line((x,y)+(x+1,y),width=2,fill=(255,0,0,0))
         draw.line((c_x,c_y)+(c_x,c_y+5),width=20,fill=(0,0,255,0))
         draw.line((f_x,f_y)+(f_x,f_y+5),width=20,fill=(0,0,255,0))
         img.save("o4.png")
