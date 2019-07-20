@@ -126,29 +126,70 @@ class Tiles():
         # Find end position coordinate
         f_x, f_y = self.longlat2pixel((self.end_lat, self.end_lon))
         # Find relative angle between two points
-        theta = math.asin((c_x-f_x)/math.sqrt((c_x-f_x)**2 + (c_y-f_y)**2.0))
+        theta = math.pi + math.acos((c_x-f_x)/math.sqrt((c_x-f_x)**2 + (c_y-f_y)**2.0))
         # Define starting searching radius
-        r = 0.005  # ~1km
+        r_ = 0.005  # ~1km
         # Define initial number of points on the circle
         n = 5000.0
         
         img = Image.open("o.png")
+        rgb_img = img.convert("RGB")
         r_x_, r_y_ = self.longlat2pixel((0,0))
-        r_x, r_y = self.longlat2pixel((r,r))
+        r_x, r_y = self.longlat2pixel((r_,r_))
         r_x, r_y = abs(r_x_ - r_x), abs(r_x_ - r_x)
-        print(r_x,r_y)
-        for i in range(int(n)):
-            draw = ImageDraw.Draw(img)
-            x = c_x + r_x*math.cos(theta + i/n*math.pi*2)
-            y = c_y + r_y*math.sin(theta + i/n*math.pi*2)
-            draw.line((x,y)+(x+1,y),width=2,fill=(255,0,0,0))
+#        print(r_x,r_y)
+#        print(theta)
+        
+        # Two cases, end point is outside the search radius
+        #   travel in the naive direction
+        # End point is withint the search radius,
+        #   simply look for end point
+        
+        # Find distance between current and end points
+        dist = math.sqrt(((c_x - f_x) ** 2 + (c_y - f_y)**2))
+        
+        # If end point is outside of the search radius
+        if(dist > r_x):
+            for i in range(int(n/2)):
+                draw = ImageDraw.Draw(img)
+                x = c_x + r_x*math.cos(theta + (i/n)*math.pi*2 * (-1)**i)
+                y = c_y + r_y*math.sin(theta + (i/n)*math.pi*2 * (-1)**i)
+                # Extract pixel's RGB components
+                r,g,b = rgb_img.getpixel((x,y))
+                # Yellow A-road
+                drawDot = False
+                if(r == 252 and g== 214 and b == 164):
+                    drawDot = True
+                # White town street                
+                elif(r == 255 and g == 255 and b == 254):
+                    drawDot = True
+                elif(r == 255 and g == 255 and b == 255):
+                    drawDot = True
+                elif(r == 254 and g == 255 and b == 254):
+                    drawDot = True
+                elif(r == 255 and g == 254 and b == 254):
+                    drawDot = True
+                elif(r == 254 and g == 254 and b == 254):
+                    drawDot = True
+                # Less yellow public road
+                elif(r == 247 and g == 248 and b == 189):
+                    drawDot = True
+                # Pink A-road
+                elif(r == 249 and g == 178 and b == 156):
+                    drawDot = True
+    #            drawDot  = True
+                if(drawDot):
+                    draw.line((x,y)+(x+1,y),width=2,fill=(255,0,0,0))
+    #                print(x,y)
+        else:
+            pass
         draw.line((c_x,c_y)+(c_x,c_y+5),width=20,fill=(0,0,255,0))
         draw.line((f_x,f_y)+(f_x,f_y+5),width=20,fill=(0,0,255,0))
         img.save("o4.png")
 
 if __name__ == '__main__':
     startPos = (51.3812, -2.3548)
-    endPos = (51.3875, -2.3550)
+    endPos = (51.3762, -2.3650)
     deltas = (0.01, 0.02)
     zoom = 15
     
