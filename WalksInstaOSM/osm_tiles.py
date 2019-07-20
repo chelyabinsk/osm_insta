@@ -151,6 +151,7 @@ if __name__ == '__main__':
     endPos = (51.3875, -2.3550)
     deltas = (0.01, 0.02)
     zoom = 15
+    
     t = Tiles(startPos, endPos, deltas, zoom)
 
     a = t.getImageCluster()
