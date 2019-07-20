@@ -111,12 +111,20 @@ class Tiles():
         draw.line(self.longlat2pixel((51.3821, -2.3578+0.001)) + self.longlat2pixel((51.3821, -2.3578)), width=5, fill=(0,0,255,100))
         img.save("o3.png")
     
+    def retrieveDirectrions(self, start, end):
+        """
+        Use this function to figure out directions between two points
+        on the map. I am going to use it to fill in the gaps in my travels
+        All credit goes to the OSM directions.
+        """
+        pass
+    
     def findEndPoint(self):
         """
         Function to find valid end step
         
         Function wil bias towards the end goal. End point can only be placed 
-        on pedestrian friendly roards. Minimum radius is 0.001 of a degree
+        on pedestrian friendly roards. Minimum radius is 0.005 of a degree
         since updates are going to be around every 15 minutes
         
         Gonna use polar coordinate just cos it's easier to draw circles
@@ -151,7 +159,6 @@ class Tiles():
         # If end point is outside of the search radius
         if(dist > r_x):
             for i in range(int(n/2)):
-                draw = ImageDraw.Draw(img)
                 x = c_x + r_x*math.cos(theta + (i/n)*math.pi*2 * (-1)**i)
                 y = c_y + r_y*math.sin(theta + (i/n)*math.pi*2 * (-1)**i)
                 # Extract pixel's RGB components
@@ -179,17 +186,20 @@ class Tiles():
                     drawDot = True
     #            drawDot  = True
                 if(drawDot):
-                    draw.line((x,y)+(x+1,y),width=2,fill=(255,0,0,0))
+                    break
     #                print(x,y)
         else:
-            pass
+            x,y = f_x, f_y
+        draw = ImageDraw.Draw(img)    
+        draw.line((x,y)+(x+10,y+10),width=5,fill=(255,0,0,0))
+        
         draw.line((c_x,c_y)+(c_x,c_y+5),width=20,fill=(0,0,255,0))
         draw.line((f_x,f_y)+(f_x,f_y+5),width=20,fill=(0,0,255,0))
         img.save("o4.png")
 
 if __name__ == '__main__':
     startPos = (51.3812, -2.3548)
-    endPos = (51.3762, -2.3650)
+    endPos = (51.3812, -2.3650)
     deltas = (0.01, 0.02)
     zoom = 15
     
