@@ -2,7 +2,8 @@ import requests
 import math
 from PIL import Image, ImageDraw
 import os 
-import json
+import csv
+import random
 
 class Tiles():
     def __init__(self, startPos, endPos, deltas, zoom):
@@ -56,12 +57,14 @@ class Tiles():
                 "Cache-Control": "max-age=0",
                 "TE": "Trailers"
                 }
+        
+#        print(xmin,xmax,ymin,ymax)
     
         Cluster = Image.new('RGB',((xmax-xmin+1)*256-1,(ymax-ymin+1)*256-1) ) 
         for xtile in range(xmin, xmax+1):
             for ytile in range(ymin,  ymax+1):
                 try:
-                    imgurl=smurl.format(zoom, xtile, ytile)
+                    imgurl=smurl.format(self.zoom, xtile, ytile)
 #                    print("Opening: " + imgurl)
                     filepath = "tiles/{}_{}.png".format(xtile,ytile)
                     # Check if tile already exists
@@ -114,12 +117,17 @@ class Tiles():
         draw = ImageDraw.Draw(img)
         for i in range(len(points)):
             point = points[i]
-            x,y = self.longlat2pixel([point[1],point[0]])
+            x,y = self.longlat2pixel([float(point[0]),float(point[1])])
             if(i == len(points) -1 ):
-                draw.line((x,y) + (x+1,y), width=5, fill = (0,0,255))
+                if(param == 1):
+                    draw.line((x-30,y-30) + (x+30,y+30), width=10, fill = (255,0,255))
+                    draw.line((x-30,y+30) + (x+30,y-30), width=10, fill = (255,0,255))
+                else:
+                    draw.line((x,y) + (x,y+1), width=10, fill = (0,0,255))
+                #draw.line((x,y+100)+(x2+100,y2), width=10, fill=(255,0,255))
             else:
                 point2 = points[i+1]
-                x2,y2 = self.longlat2pixel([point2[1],point2[0]])
+                x2,y2 = self.longlat2pixel([float(point2[0]),float(point2[1])])
                 draw.line((x,y)+(x2,y2), width=5, fill=(0,0,255))
         #draw.line(self.longlat2pixel((51.3821, -2.3578+0.001)) + self.longlat2pixel((51.3821, -2.3578)), width=5, fill=(0,0,255,100))
         img.save(mapname)
@@ -141,13 +149,10 @@ class Tiles():
         locs = []  # List of locations
         for step in steps:
             for inter in step["intersections"]:
-                locs.append(inter["location"])
-            locs.append(step["maneuver"]["location"])
+                locs.append([inter["location"][1],inter["location"][0]])
+            locs.append([step["maneuver"]["location"][1],step["maneuver"]["location"][0]])
         return locs
         
-        #https://routing.openstreetmap.de/routed-foot/route/v1/driving/-2.3648278,51.3838674;-2.3626613616943364,51.386499401860114?overview=false&geometries=polyline&steps=true
-        #https://routing.openstreetmap.de/routed-foot/route/v1/driving/-2.3647764572097345,51.38379438500331;-2.3548,51.3812?overview=false&geometries=polyline&steps=true
-        #https://routing.openstreetmap.de/routed-foot/route/v1/driving/51.38379438500331,-2.3647764572097345;51.3812,-2.3548?overview=false&geometries=polyline&steps=true
     def findEndPoint(self):
         """
         Function to find valid end step
@@ -165,7 +170,7 @@ class Tiles():
         # Find relative angle between two points
         theta = math.pi + math.acos((c_x-f_x)/math.sqrt((c_x-f_x)**2 + (c_y-f_y)**2.0))
         # Define starting searching radius
-        r_ = 0.005  # ~1km
+        r_ = 0.009  # ~1km
         # Define initial number of points on the circle
         n = 5000.0
         
@@ -192,7 +197,6 @@ class Tiles():
                 y = c_y + r_y*math.sin(theta + (i/n)*math.pi*2 * (-1)**i)
                 # Extract pixel's RGB components
                 r,g,b = rgb_img.getpixel((x,y))
-#                r,g,b = (0,0,0)
                 # Yellow A-road
                 drawDot = False
                 if(r == 252 and g== 214 and b == 164):
@@ -211,20 +215,19 @@ class Tiles():
                 # Less yellow public road
                 elif(r == 247 and g == 248 and b == 189):
                     drawDot = True
+                elif(r == 247 and g == 250 and b == 191):
+                    drawDot = True
                 # Pink A-road
                 elif(r == 249 and g == 178 and b == 156):
                     drawDot = True
-#                drawDot  = True
+#                elif(r == 242 and g == 239 and b == 233):
+#                    drawDot = True
                 if(drawDot):
                     break
-    #                print(x,y)
         else:
             x,y = f_x, f_y
         draw = ImageDraw.Draw(img)    
-#        draw.line((x,y)+(x+10,y+10),width=5,fill=(255,0,0,0))
-        
-#        draw.line((c_x,c_y)+(c_x,c_y+5),width=20,fill=(0,0,255,0))
-#        draw.line((f_x,f_y)+(f_x,f_y+5),width=20,fill=(0,0,255,0))
+
         img.save("o4.png")
         return (x,y)
     
@@ -241,44 +244,86 @@ class Tiles():
         y = 256 * (n[1] - self.ymin) + n[3]*256
         draw = ImageDraw.Draw(img)
         draw.line((x,y)+(x+1,y),width=10,fill=(0,0,0))
-#        img.save("o3.png")
-#        print(lat,lon,x,y)
-#        print(self.xmin,self.xmax,n)
         
+    def updateHistoricFile(self, steps):
+        # Update historic travels file
+        with open("history.csv", "r") as f:
+            reader = csv.reader(f)
+            hist = list(reader)
+#        if(len(hist) > 2000):
+#            new_list = hist[len(hist)-1000:]
+#            with open("history.csv","w") as f:
+#                writer = csv.writer(f, lineterminator="\n")
+#                writer.writerows(new_list)
+        with open("history.csv", "a") as output:
+            writer = csv.writer(output, lineterminator='\n')
+            writer.writerows(steps)
+            
     def updateMap(self):
+        # Read historic file
+        with open('history.csv', 'r') as f:
+          reader = csv.reader(f)
+          history = list(reader)
         # Find current end point
         endpoint_c = self.findEndPoint()
         # Destination deg
         pos_d = self.pixel2longlat(endpoint_c)
         # Current position deg
         pos_c = self.lat_deg,self.lon_deg
-#        print(pos_d,pos_c)
+        print(pos_d,pos_c)
+        # If point already been visited
+        if([str(pos_c[0]),str(pos_c[1])] in history):
+            rand_x, rand_y = random.randint(int(endpoint_c[0]),
+                                            1080),random.randint(int(endpoint_c[1]),
+                                                                1080)
+            pos_d = self.pixel2longlat((rand_x,rand_y))
         # Find directions between current and end point
         steps = self.retrieveDirectrions(pos_c,pos_d)
         # Plot the points on the map
-        self.addPoints2map("o4.png",steps)
+        self.addPoints2map("o4.png",steps,1)
         # Plot historic travel in different colour
+        self.addPoints2map("o.png",history)
+        # Append the historic file
+        self.updateHistoricFile(steps)        
+        # Add other fun stats 
+        #   (distance traveled, distance to destination, destination name
+        #       time taken so far, current time, time to destination)
+        # 2 zoomed out views to show where I'm going and where I've been
         
-        # Add other fun stats
+class Traveller():
+    def __init__(self):
+        # Read historic file
+        with open('history.csv', 'r') as f:
+          reader = csv.reader(f)
+          history = list(reader)
+        # Read destinations file
+        with open("destinations.csv","r") as f:
+            reader = csv.reader(f)
+            dest = list(reader)
+#        print(history[-1])
+        
+        
+        startPos = (float(history[-1][0]),float(history[-1][1]))
+        endPos = (float(dest[0][0]),float(dest[0][1]))
+        deltas = (0.01, 0.02)
+    #    deltas = (0.001, 0.005)
+        zoom = 15
+        
+#        print(startPos, endPos, zoom)
+        t = Tiles(startPos, endPos, deltas, zoom)
+    
+        a = t.getImageCluster()
+    #    fig = plt.figure()
+    #    fig.patch.set_facecolor('white')    
+    #    plt.imshow(np.asarray(a))
+    #    plt.show()
+        a.save("o.png")
+        b = a.resize((100,100),Image.ANTIALIAS)
+    #    b.save("o2.png")
+        #t.addPoints2map(1,1,1)
+        t.updateMap()
+    #    print(t.longlat2pixel((51.3812,-2.3548)))
         
 
 if __name__ == '__main__':
-    startPos = (51.3812, -2.3548)
-    endPos = (51.3704,-2.3184)
-    deltas = (0.01, 0.02)
-#    deltas = (0.001, 0.005)
-    zoom = 15
-    
-    t = Tiles(startPos, endPos, deltas, zoom)
-
-    a = t.getImageCluster()
-#    fig = plt.figure()
-#    fig.patch.set_facecolor('white')    
-#    plt.imshow(np.asarray(a))
-#    plt.show()
-    a.save("o.png")
-    b = a.resize((1080,1080),Image.ANTIALIAS)
-#    b.save("o2.png")
-    #t.addPoints2map(1,1,1)
-    t.updateMap()
-#    print(t.longlat2pixel((51.3812,-2.3548)))
+    travel = Traveller()
