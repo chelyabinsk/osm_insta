@@ -65,7 +65,7 @@ class Tiles():
             for ytile in range(ymin,  ymax+1):
                 try:
                     imgurl=smurl.format(self.zoom, xtile, ytile)
-#                    print("Opening: " + imgurl)
+                    print("Opening: " + imgurl)
                     filepath = "tiles/{}_{}.png".format(xtile,ytile)
                     # Check if tile already exists
                     if(not os.path.isfile(filepath)):
@@ -113,11 +113,13 @@ class Tiles():
         Function to add points to the map
         """
         # Open output image
-        img = Image.open("o4.png")
+        img = Image.open("o.png")
+#        print(points,mapname)
         draw = ImageDraw.Draw(img)
         for i in range(len(points)):
             point = points[i]
             x,y = self.longlat2pixel([float(point[0]),float(point[1])])
+#            print(x,y)
             if(i == len(points) -1 ):
                 if(param == 1):
                     draw.line((x-30,y-30) + (x+30,y+30), width=10, fill = (255,0,255))
@@ -131,106 +133,7 @@ class Tiles():
                 draw.line((x,y)+(x2,y2), width=5, fill=(0,0,255))
         #draw.line(self.longlat2pixel((51.3821, -2.3578+0.001)) + self.longlat2pixel((51.3821, -2.3578)), width=5, fill=(0,0,255,100))
         img.save(mapname)
-    
-    def retrieveDirectrions(self, start, end):
-        """
-        Use this function to figure out directions between two points
-        on the map. I am going to use it to fill in the gaps in my travels
-        All credit goes to the OSM directions.
-        """
-        url = "https://routing.openstreetmap.de/routed-foot/route/v1/driving/{0},{1};{2},{3}?overview=false&geometries=polyline&steps=true"
-        url = url.format(start[1],start[0],end[1],end[0])
-        r = requests.get(url).json()
-        routes = r["routes"]
-        dist = routes[0]["distance"]
-        dur = routes[0]["duration"]
-        steps = routes[0]["legs"][0]["steps"]
-        # Go through the given JSON and extract location of each turn
-        locs = []  # List of locations
-        for step in steps:
-            for inter in step["intersections"]:
-                locs.append([inter["location"][1],inter["location"][0]])
-            locs.append([step["maneuver"]["location"][1],step["maneuver"]["location"][0]])
-        return locs
         
-    def findEndPoint(self):
-        """
-        Function to find valid end step
-        
-        Function wil bias towards the end goal. End point can only be placed 
-        on pedestrian friendly roards. Minimum radius is 0.005 of a degree
-        since updates are going to be around every 15 minutes
-        
-        Gonna use polar coordinate just cos it's easier to draw circles
-        """
-        # Find current position coordinate
-        c_x, c_y = self.longlat2pixel((self.lat_deg,self.lon_deg))
-        # Find end position coordinate)
-        f_x, f_y = self.longlat2pixel((self.end_lat, self.end_lon))
-        # Find relative angle between two points
-        theta = math.pi + math.acos((c_x-f_x)/math.sqrt((c_x-f_x)**2 + (c_y-f_y)**2.0))
-        # Define starting searching radius
-        r_ = 0.009  # ~1km
-        # Define initial number of points on the circle
-        n = 5000.0
-        
-        img = Image.open("o.png")
-        rgb_img = img.convert("RGB")
-        r_x_, r_y_ = self.longlat2pixel((0,0))
-        r_x, r_y = self.longlat2pixel((r_,r_))
-        r_x, r_y = abs(r_x_ - r_x), abs(r_x_ - r_x)
-#        print(r_x,r_y)
-#        print(theta)
-        
-        # Two cases, end point is outside the search radius
-        #   travel in the naive direction
-        # End point is withint the search radius,
-        #   simply look for end point
-        
-        # Find distance between current and end points
-        dist = math.sqrt(((c_x - f_x) ** 2 + (c_y - f_y)**2))
-        
-        # If end point is outside of the search radius
-        if(dist > r_x):
-            for i in range(int(n/2)):
-                x = c_x + r_x*math.cos(theta + (i/n)*math.pi*2 * (-1)**i)
-                y = c_y + r_y*math.sin(theta + (i/n)*math.pi*2 * (-1)**i)
-                # Extract pixel's RGB components
-                r,g,b = rgb_img.getpixel((x,y))
-                # Yellow A-road
-                drawDot = False
-                if(r == 252 and g== 214 and b == 164):
-                    drawDot = True
-                # White town street                
-                elif(r == 255 and g == 255 and b == 254):
-                    drawDot = True
-                elif(r == 255 and g == 255 and b == 255):
-                    drawDot = True
-                elif(r == 254 and g == 255 and b == 254):
-                    drawDot = True
-                elif(r == 255 and g == 254 and b == 254):
-                    drawDot = True
-                elif(r == 254 and g == 254 and b == 254):
-                    drawDot = True
-                # Less yellow public road
-                elif(r == 247 and g == 248 and b == 189):
-                    drawDot = True
-                elif(r == 247 and g == 250 and b == 191):
-                    drawDot = True
-                # Pink A-road
-                elif(r == 249 and g == 178 and b == 156):
-                    drawDot = True
-#                elif(r == 242 and g == 239 and b == 233):
-#                    drawDot = True
-                if(drawDot):
-                    break
-        else:
-            x,y = f_x, f_y
-        draw = ImageDraw.Draw(img)    
-
-        img.save("o4.png")
-        return (x,y)
-    
     def drawPointOnMap(self,point):
         """
         Function to draw a point on the map given a long-lat
@@ -258,6 +161,38 @@ class Tiles():
         with open("history.csv", "a") as output:
             writer = csv.writer(output, lineterminator='\n')
             writer.writerows(steps)
+        
+    def osm_directions(self,max_dist):
+        """
+        Use OSM to find directions all the way to the end point
+        Otherwise I get lost lol
+        """
+        start = (self.lat_deg, self.lon_deg)
+        end = (self.end_lat, self.end_lon)
+        url = "https://routing.openstreetmap.de/routed-foot/route/v1/driving/{0},{1};{2},{3}?overview=false&geometries=polyline&steps=true"
+        url = url.format(start[1],start[0],end[1],end[0])
+        r = requests.get(url).json()
+        routes = r["routes"]
+        steps = routes[0]["legs"][0]["steps"]
+        # Go through the given JSON and extract location of each turn
+        locs = []  # List of locations
+        dist_tmp = 0
+        dur_tmp = 0
+        total_dist = routes[0]["distance"]
+        for step in steps:
+            dist = step["distance"]
+            dur = step["duration"]
+            locs.append([step["maneuver"]["location"][1],step["maneuver"]["location"][0]])
+            for inter in step["intersections"]:
+                locs.append([inter["location"][1],inter["location"][0]])
+                pass
+            dist_tmp += dist
+            dur_tmp += dur
+            #print(dist_tmp,max_dist)
+            if(dist_tmp > max_dist):
+                #print(step["distance"])
+                break
+        return [locs,[dist_tmp,total_dist],dur]
             
     def updateMap(self):
         # Read historic file
@@ -265,26 +200,24 @@ class Tiles():
           reader = csv.reader(f)
           history = list(reader)
         # Find current end point
-        endpoint_c = self.findEndPoint()
+        #endpoint_c = self.findEndPoint()
+        # Use OSM navigation to find the end point
+        max_travel_dist = 1000  # How far to check the map in this step
+        dirs = self.osm_directions(max_travel_dist)  # List of directions with stats
+        endpoint_c = dirs[0][-1]
         # Destination deg
         pos_d = self.pixel2longlat(endpoint_c)
         # Current position deg
         pos_c = self.lat_deg,self.lon_deg
-        print(pos_d,pos_c)
-        # If point already been visited
-        if([str(pos_c[0]),str(pos_c[1])] in history):
-            rand_x, rand_y = random.randint(int(endpoint_c[0]),
-                                            1080),random.randint(int(endpoint_c[1]),
-                                                                1080)
-            pos_d = self.pixel2longlat((rand_x,rand_y))
+        #print(pos_d,pos_c)
         # Find directions between current and end point
-        steps = self.retrieveDirectrions(pos_c,pos_d)
+        #steps = self.retrieveDirectrions(pos_c,pos_d)
         # Plot the points on the map
-        self.addPoints2map("o4.png",steps,1)
+        self.addPoints2map("o.png",dirs[0],0)
         # Plot historic travel in different colour
         self.addPoints2map("o.png",history)
         # Append the historic file
-        self.updateHistoricFile(steps)        
+        self.updateHistoricFile(dirs[0])        
         # Add other fun stats 
         #   (distance traveled, distance to destination, destination name
         #       time taken so far, current time, time to destination)
@@ -306,23 +239,15 @@ class Traveller():
         startPos = (float(history[-1][0]),float(history[-1][1]))
         endPos = (float(dest[0][0]),float(dest[0][1]))
         deltas = (0.01, 0.02)
-    #    deltas = (0.001, 0.005)
         zoom = 15
         
 #        print(startPos, endPos, zoom)
         t = Tiles(startPos, endPos, deltas, zoom)
     
         a = t.getImageCluster()
-    #    fig = plt.figure()
-    #    fig.patch.set_facecolor('white')    
-    #    plt.imshow(np.asarray(a))
-    #    plt.show()
         a.save("o.png")
-        b = a.resize((100,100),Image.ANTIALIAS)
-    #    b.save("o2.png")
-        #t.addPoints2map(1,1,1)
         t.updateMap()
-    #    print(t.longlat2pixel((51.3812,-2.3548)))
+
         
 
 if __name__ == '__main__':
