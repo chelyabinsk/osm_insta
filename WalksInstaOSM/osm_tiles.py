@@ -6,14 +6,14 @@ import csv
 import random
 
 class Tiles():
-    def __init__(self, startPos, endPos, deltas, zoom,filename):
+    def __init__(self, startPos, endPos, deltas, zoom,filename,main=False):
         # Initialise positional parameters
         self.lat_deg, self.lon_deg = startPos
         self.end_lat, self.end_lon = endPos
         self.delta_lat, self.delta_long = deltas
         self.zoom = zoom
         self.filename = filename
-        
+        self.is_main = main
     def deg2num(self, lat_deg, lon_deg, zoom):
       lat_rad = math.radians(lat_deg)
       n = 2.0 ** zoom
@@ -43,6 +43,16 @@ class Tiles():
                                  self.lon_deg - self.delta_long, self.zoom)
         xmax, ymin =self.deg2num(self.lat_deg + self.delta_lat, 
                                  self.lon_deg + self.delta_long, self.zoom)
+        
+        xtile, ytile =self.deg2num(self.lat_deg,self.lon_deg, self.zoom)
+        xmin = xtile - 2
+        xmax = xtile + 2
+        if(self.zoom == 7):
+            ymin = ytile - 3
+            ymax = ytile + 1
+        else:
+            ymin = ytile - 2
+            ymax = ytile + 2
         
         self.xmin, self.ymax, self.xmax, self.ymin = xmin,ymax,xmax,ymin
         
@@ -139,16 +149,24 @@ class Tiles():
         """
         Function to draw end point on the map
         """
+        
+        # Open output image
+        img = Image.open(self.filename)
+        draw = ImageDraw.Draw(img)
+        
         # Check whether end point is visible on the map
         if(self.end_lat > self.lat_deg - self.delta_lat and 
            self.end_lat < self.lat_deg + self.delta_lat):
             # Visible
             # Highlight that point on the map
-            pass
+            x,y = self.longlat2pixel((self.end_lat,self.end_lon))
+#            print(x,y)
+            draw.ellipse((x-20,y-20,x+20,y+20),width = 10, outline = (255,74,90))
         else:
             # Not visible
             # Draw an arrow towards the destination
             pass
+        img.save(self.filename)
         
     def drawPointOnMap(self,point):
         """
@@ -208,8 +226,8 @@ class Tiles():
             dist_tmp += dist
             dur_tmp += dur
             #print(dist_tmp,max_dist)
-            locs = [x for i, x in enumerate(locs) if locs.index(x) == i]
-            if(dist_tmp > max_dist and len(locs) > 1):
+            locs_ = [x for i, x in enumerate(locs) if locs.index(x) == i]
+            if(dist_tmp > max_dist and len(locs_) > 1):
 #                print(step["distance"])
                 break
 #        print(start,end)
@@ -237,8 +255,11 @@ class Tiles():
         self.addPoints2map(self.filename,dirs[0],0)
         # Plot historic travel in different colour
         self.addPoints2map(self.filename,history)
-        # Append the historic file
-        self.updateHistoricFile(dirs[0])        
+        if(self.is_main):
+            # Append the historic file
+            self.updateHistoricFile(dirs[0])       
+        # Annotate end goal on the map
+        self.draw_destination_direction()
         # Add other fun stats 
         #   (distance traveled, distance to destination, destination name
         #       time taken so far, current time, time to destination)
@@ -273,22 +294,31 @@ class Traveller():
         else:
             pass
         
-        deltas = (0.02, 0.03)
+        deltas = (0.03, 0.02)
         zoom = 14
         
         filename = "o.png"
 #        print(startPos, endPos, zoom)
+        t = Tiles(startPos, endPos, deltas, zoom,filename,main=True)
+    
+        a = t.getImageCluster()
+        a.save(filename)
+        t.updateMap()
+        
+        deltas = (0.1, 0.2)
+        zoom = 12
+        
+        filename = "o2.png"
         t = Tiles(startPos, endPos, deltas, zoom,filename)
     
         a = t.getImageCluster()
         a.save(filename)
         t.updateMap()
         
-        deltas = (0.9, 1.1)
-        zoom = 14
+        deltas = (0.7,0.7)
+        zoom = 7
         
-        filename = "o2.png"
-#        print(startPos, endPos, zoom)
+        filename = "o3.png"
         t = Tiles(startPos, endPos, deltas, zoom,filename)
     
         a = t.getImageCluster()
