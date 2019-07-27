@@ -6,12 +6,13 @@ import csv
 import random
 
 class Tiles():
-    def __init__(self, startPos, endPos, deltas, zoom):
+    def __init__(self, startPos, endPos, deltas, zoom,filename):
         # Initialise positional parameters
         self.lat_deg, self.lon_deg = startPos
         self.end_lat, self.end_lon = endPos
         self.delta_lat, self.delta_long = deltas
         self.zoom = zoom
+        self.filename = filename
         
     def deg2num(self, lat_deg, lon_deg, zoom):
       lat_rad = math.radians(lat_deg)
@@ -113,7 +114,7 @@ class Tiles():
         Function to add points to the map
         """
         # Open output image
-        img = Image.open("o.png")
+        img = Image.open(self.filename)
 #        print(points,mapname)
         draw = ImageDraw.Draw(img)
         for i in range(len(points)):
@@ -125,20 +126,35 @@ class Tiles():
                     draw.line((x-30,y-30) + (x+30,y+30), width=10, fill = (255,0,255))
                     draw.line((x-30,y+30) + (x+30,y-30), width=10, fill = (255,0,255))
                 else:
-                    draw.line((x,y) + (x,y+1), width=10, fill = (0,0,255))
+                    draw.line((x,y) + (x,y+5), width=10, fill = (0,0,255))
                 #draw.line((x,y+100)+(x2+100,y2), width=10, fill=(255,0,255))
             else:
                 point2 = points[i+1]
                 x2,y2 = self.longlat2pixel([float(point2[0]),float(point2[1])])
-                draw.line((x,y)+(x2,y2), width=5, fill=(0,0,255))
+                draw.line((x,y)+(x2,y2), width=5, fill=(255,50,200))
         #draw.line(self.longlat2pixel((51.3821, -2.3578+0.001)) + self.longlat2pixel((51.3821, -2.3578)), width=5, fill=(0,0,255,100))
         img.save(mapname)
+        
+    def draw_destination_direction(self):
+        """
+        Function to draw end point on the map
+        """
+        # Check whether end point is visible on the map
+        if(self.end_lat > self.lat_deg - self.delta_lat and 
+           self.end_lat < self.lat_deg + self.delta_lat):
+            # Visible
+            # Highlight that point on the map
+            pass
+        else:
+            # Not visible
+            # Draw an arrow towards the destination
+            pass
         
     def drawPointOnMap(self,point):
         """
         Function to draw a point on the map given a long-lat
         """
-        img = Image.open("o.png")
+        img = Image.open(self.filename)
         lat,lon = self.lat_deg, self.lon_deg
         lat,lon = (51.3805, -2.3448)
         n = self.deg2num2(lat,lon,self.zoom)
@@ -192,9 +208,12 @@ class Tiles():
             dist_tmp += dist
             dur_tmp += dur
             #print(dist_tmp,max_dist)
+            locs = [x for i, x in enumerate(locs) if locs.index(x) == i]
             if(dist_tmp > max_dist and len(locs) > 1):
-                #print(step["distance"])
+#                print(step["distance"])
                 break
+#        print(start,end)
+#        print(locs)
         return [locs,[dist_tmp,total_dist],dur]
             
     def updateMap(self):
@@ -215,9 +234,9 @@ class Tiles():
         # Find directions between current and end point
         #steps = self.retrieveDirectrions(pos_c,pos_d)
         # Plot the points on the map
-        self.addPoints2map("o.png",dirs[0],0)
+        self.addPoints2map(self.filename,dirs[0],0)
         # Plot historic travel in different colour
-        self.addPoints2map("o.png",history)
+        self.addPoints2map(self.filename,history)
         # Append the historic file
         self.updateHistoricFile(dirs[0])        
         # Add other fun stats 
@@ -236,18 +255,44 @@ class Traveller():
             reader = csv.reader(f)
             dest = list(reader)
 #        print(history[-1])
-        
-        
+                
         startPos = (float(history[-1][0]),float(history[-1][1]))
         endPos = (float(dest[0][0]),float(dest[0][1]))
-        deltas = (0.01, 0.02)
-        zoom = 15
         
+        # Check if destination had been reached        
+        dist_between = math.sqrt( (startPos[0]-endPos[0])**2
+                                 +(startPos[1]-endPos[1])**2)
+        if(dist_between < 0.005):
+            # Destination had been reached
+            # Read next destination
+            endPos = (float(dest[1][0]),float(dest[1][1]))
+            # Remove top destination from the file
+            with open("destinations.csv", "w") as output:
+                writer = csv.writer(output, lineterminator='\n')
+                writer.writerows(dest[1:])
+        else:
+            pass
+        
+        deltas = (0.02, 0.03)
+        zoom = 14
+        
+        filename = "o.png"
 #        print(startPos, endPos, zoom)
-        t = Tiles(startPos, endPos, deltas, zoom)
+        t = Tiles(startPos, endPos, deltas, zoom,filename)
     
         a = t.getImageCluster()
-        a.save("o.png")
+        a.save(filename)
+        t.updateMap()
+        
+        deltas = (0.9, 1.1)
+        zoom = 14
+        
+        filename = "o2.png"
+#        print(startPos, endPos, zoom)
+        t = Tiles(startPos, endPos, deltas, zoom,filename)
+    
+        a = t.getImageCluster()
+        a.save(filename)
         t.updateMap()
 
         
