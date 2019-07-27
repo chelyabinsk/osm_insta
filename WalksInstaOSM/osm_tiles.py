@@ -65,7 +65,7 @@ class Tiles():
             for ytile in range(ymin,  ymax+1):
                 try:
                     imgurl=smurl.format(self.zoom, xtile, ytile)
-                    print("Opening: " + imgurl)
+#                    print("Opening: " + imgurl)
                     filepath = "tiles/{}_{}.png".format(xtile,ytile)
                     # Check if tile already exists
                     if(not os.path.isfile(filepath)):
@@ -171,7 +171,8 @@ class Tiles():
         end = (self.end_lat, self.end_lon)
         url = "https://routing.openstreetmap.de/routed-foot/route/v1/driving/{0},{1};{2},{3}?overview=false&geometries=polyline&steps=true"
         url = url.format(start[1],start[0],end[1],end[0])
-        r = requests.get(url).json()
+        r = requests.get(url)
+        r = r.json()
         routes = r["routes"]
         steps = routes[0]["legs"][0]["steps"]
         # Go through the given JSON and extract location of each turn
@@ -179,7 +180,9 @@ class Tiles():
         dist_tmp = 0
         dur_tmp = 0
         total_dist = routes[0]["distance"]
+#        print(len(steps))
         for step in steps:
+#            print(step)
             dist = step["distance"]
             dur = step["duration"]
             locs.append([step["maneuver"]["location"][1],step["maneuver"]["location"][0]])
@@ -189,7 +192,7 @@ class Tiles():
             dist_tmp += dist
             dur_tmp += dur
             #print(dist_tmp,max_dist)
-            if(dist_tmp > max_dist):
+            if(dist_tmp > max_dist and len(locs) > 1):
                 #print(step["distance"])
                 break
         return [locs,[dist_tmp,total_dist],dur]
@@ -204,12 +207,11 @@ class Tiles():
         # Use OSM navigation to find the end point
         max_travel_dist = 1000  # How far to check the map in this step
         dirs = self.osm_directions(max_travel_dist)  # List of directions with stats
-        endpoint_c = dirs[0][-1]
         # Destination deg
-        pos_d = self.pixel2longlat(endpoint_c)
+        pos_d = dirs[0][-1]
         # Current position deg
         pos_c = self.lat_deg,self.lon_deg
-        #print(pos_d,pos_c)
+#        print(dirs[0])
         # Find directions between current and end point
         #steps = self.retrieveDirectrions(pos_c,pos_d)
         # Plot the points on the map
