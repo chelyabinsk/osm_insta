@@ -3,7 +3,13 @@ import math
 from PIL import Image, ImageDraw
 import os 
 import csv
+import urllib.parse
 import random
+
+class Stats():
+    def __init__(self):
+        # Read the current stats file
+        pass
 
 class Tiles():
     def __init__(self, startPos, endPos, deltas, zoom,filename,main=False):
@@ -264,8 +270,55 @@ class Tiles():
         #   (distance traveled, distance to destination, destination name
         #       time taken so far, current time, time to destination)
         # 2 zoomed out views to show where I'm going and where I've been
+    
+    def resize(self):
+        img = Image.open(self.filename)
+        img = img.resize((1080,1350))
+        img.save(self.filename)
         
 class Traveller():
+    def find_town_from_postcode(self,postcode):
+        """
+        This website will give me the town name from the postcode
+        """
+        # Extract the main part of the postcode
+        url = "https://www.doogal.co.uk/UKPostcodes.php?Search={}"
+        url = url.format(urllib.parse.quote(postcode))
+        r = requests.get(url)
+        if(r.status_code == 200):
+#            print(url)
+            text = r.text
+            i = text.index("<small>")
+            j = text.index("</small>",i)
+            name = (text[i + len("<small>"):j])
+            return name
+        else:
+            return ""
+        
+        
+    def find_next_destination(self):
+        """
+        Function to pick a random postcode within the UK to travel to
+        Luckily website I found also returns lat and long
+        """
+        url = "https://www.doogal.co.uk/CreateRandomPostcode.ashx"
+        r = requests.get(url)
+        if(r.status_code == 200):
+            html = str(r.content).replace("\\n","").replace("b'","").replace("'","")
+            return_list = html.split(",")
+#            print(return_list)
+            for i in range(1,3):
+                return_list[i] = eval(return_list[i])
+            name = self.find_town_from_postcode(return_list[0])
+            return_list.append(name)
+            return return_list
+        else:
+            rnd_dests = [ ["",51.3778,-2.3253,"Bath University"], 
+                          ["",51.4769,0,"Greenwich"],
+                          ["",52.0572,1.2253,"Ipswich"]]
+            i = random.randint(0,len(rnd_dests)-1)
+            return rnd_dests[i]
+        
     def __init__(self):
         # Read historic file
         with open('history.csv', 'r') as f:
@@ -278,23 +331,24 @@ class Traveller():
 #        print(history[-1])
                 
         startPos = (float(history[-1][0]),float(history[-1][1]))
-        endPos = (float(dest[0][0]),float(dest[0][1]))
+        endPos = (float(dest[0][1]),float(dest[0][2]))
         
         # Check if destination had been reached        
         dist_between = math.sqrt( (startPos[0]-endPos[0])**2
                                  +(startPos[1]-endPos[1])**2)
         if(dist_between < 0.005):
             # Destination had been reached
-            # Read next destination
-            endPos = (float(dest[1][0]),float(dest[1][1]))
-            # Remove top destination from the file
+            next_pos = self.find_next_destination()
+            endPos = (next_pos[1],next_pos[2])
+            dest.insert(0,next_pos)
+            # Add new destination to the file
             with open("destinations.csv", "w") as output:
                 writer = csv.writer(output, lineterminator='\n')
-                writer.writerows(dest[1:])
+                writer.writerows(dest)
         else:
             pass
         
-        deltas = (0.03, 0.02)
+        deltas = (2, 2)
         zoom = 14
         
         filename = "o.png"
@@ -304,8 +358,9 @@ class Traveller():
         a = t.getImageCluster()
         a.save(filename)
         t.updateMap()
-        
-        deltas = (0.1, 0.2)
+        t.resize()
+        print("Done 1")
+        deltas = (2,2)
         zoom = 12
         
         filename = "o2.png"
@@ -314,8 +369,10 @@ class Traveller():
         a = t.getImageCluster()
         a.save(filename)
         t.updateMap()
+        t.resize()
+        print("Done 2")
         
-        deltas = (0.7,0.7)
+        deltas = (2,2)
         zoom = 7
         
         filename = "o3.png"
@@ -324,6 +381,8 @@ class Traveller():
         a = t.getImageCluster()
         a.save(filename)
         t.updateMap()
+        t.resize()
+        print("Done 3")
 
         
 
