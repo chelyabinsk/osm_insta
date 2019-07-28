@@ -1,19 +1,46 @@
 import requests
 import math
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 import os 
 import csv
 import urllib.parse
 import random
+from time import gmtime, strftime
 
 class Stats():
     def __init__(self):
         # Read the current stats file
-        pass
+        with open("stats.csv", "r") as f:
+            reader = csv.reader(f)
+            stats = list(reader)
+        self.stats = stats
+        
+    def last_stats(self):
+        return self.stats[-1]
+    
+    def update_stats(self,new_line):
+        # Write file
+        with open("stats.csv", "a") as output:
+            writer = csv.writer(output, lineterminator='\n')
+            writer.writerow(new_line)
+    
+    def clean_files(self):
+        # Remove some lines from the historic files
+        with open("history.csv", "r") as f:
+            reader = csv.reader(f)
+            hist = list(reader)
+        if(len(hist) > 1010):
+            with open("history.csv","w") as f:
+                writer = csv.writer(f,lineterminator="\n")
+                writer.writerows(hist[len(hist)-1000:])
+        if(len(self.stats) > 1010):
+            with open("stats.csv","w") as f:
+                writer = csv.writer(self.stats[len(self.stats)-1000:])
 
 class Tiles():
-    def __init__(self, startPos, endPos, deltas, zoom,filename,main=False):
+    def __init__(self, startPos, endPos, deltas, zoom,filename,dest_name="",main=False):
         # Initialise positional parameters
+        self.dest_name = dest_name
         self.lat_deg, self.lon_deg = startPos
         self.end_lat, self.end_lon = endPos
         self.delta_lat, self.delta_long = deltas
@@ -83,7 +110,7 @@ class Tiles():
                 try:
                     imgurl=smurl.format(self.zoom, xtile, ytile)
 #                    print("Opening: " + imgurl)
-                    filepath = "tiles/{}_{}.png".format(xtile,ytile)
+                    filepath = "tiles/{}_{}.jpg".format(xtile,ytile)
                     # Check if tile already exists
                     if(not os.path.isfile(filepath)):
                         # Download the tile
@@ -240,7 +267,7 @@ class Tiles():
 #        print(locs)
         return [locs,[dist_tmp,total_dist],dur]
             
-    def updateMap(self):
+    def updateMap(self):       
         # Read historic file
         with open('history.csv', 'r') as f:
           reader = csv.reader(f)
@@ -267,9 +294,52 @@ class Tiles():
         # Annotate end goal on the map
         self.draw_destination_direction()
         # Add other fun stats 
+        if(self.zoom == 14):
+            # Create instance of the stats class
+            stats = Stats()
+            line = [self.lon_deg,
+                    self.lat_deg,
+                    strftime("%Y-%m-%d %H:%M:%S", gmtime()),
+                    self.dest_name,
+                    dirs[1][1],
+                    eval(stats.last_stats()[5]) + dirs[1][0],
+                    dirs[1][0],
+                    eval(stats.last_stats()[7]) + random.randint(0,1),
+                    0,  # Weather type
+                    0,  # Temperature
+                    ]
+            stats.update_stats(line)
+#            print(line)
+        
         #   (distance traveled, distance to destination, destination name
         #       time taken so far, current time, time to destination)
         # 2 zoomed out views to show where I'm going and where I've been
+    
+    def add_stats_to_pic(self,data):
+        """
+        Use this function to add text to the image
+        """
+        img = Image.open(self.filename)
+        draw = ImageDraw.Draw(img)
+        # font = ImageFont.truetype(<font-file>, <font-size>)
+        font = ImageFont.truetype("fonts/adventpro-regular.ttf", 65)
+        step_size = 58
+        # draw.text((x, y),"Sample Text",(r,g,b))
+        text = "Location: {}, {}".format(data[0],data[1])
+        draw.text((0, 0),text,(0,0,0),font=font)
+        text = "Datetime: {}".format(data[2])
+        draw.text((0, step_size),text,(0,0,0),font=font)
+        text = "Destination: {}".format(data[3])
+        draw.text((0, step_size*2),text,(0,0,0),font=font)
+        text = "Distance to go: {}m".format(round(eval(data[4]),1))
+        draw.text((0, step_size*3),text,(0,0,0),font=font)
+        text = "Distance traveled (total): {}m".format(round(eval(data[5]),1))
+        draw.text((0, step_size*4),text,(0,0,0),font=font)
+        text = "Distance traveled (this interval): {}m".format(round(eval(data[6]),1))
+        draw.text((0, step_size*5),text,(0,0,0),font=font)
+        text = "Sandwich counter: {}".format(data[7])
+        draw.text((0, step_size*6),text,(0,0,0),font=font)
+        img.save(self.filename)
     
     def resize(self):
         img = Image.open(self.filename)
@@ -320,6 +390,7 @@ class Traveller():
             return rnd_dests[i]
         
     def __init__(self):
+        stats = Stats()
         # Read historic file
         with open('history.csv', 'r') as f:
           reader = csv.reader(f)
@@ -337,8 +408,10 @@ class Traveller():
         dist_between = math.sqrt( (startPos[0]-endPos[0])**2
                                  +(startPos[1]-endPos[1])**2)
         if(dist_between < 0.005):
+            stats.clean_files()  # Remove some historic data
             # Destination had been reached
             next_pos = self.find_next_destination()
+            dest_name = next_pos[-1]
             endPos = (next_pos[1],next_pos[2])
             dest.insert(0,next_pos)
             # Add new destination to the file
@@ -346,45 +419,48 @@ class Traveller():
                 writer = csv.writer(output, lineterminator='\n')
                 writer.writerows(dest)
         else:
-            pass
+            # Read the stats file
+            s = Stats()
+            next_pos = s.last_stats()
+            dest_name = next_pos[3]
         
         deltas = (2, 2)
-        zoom = 14
-        
-        filename = "o.png"
+        zoom = 14        
+        filename = "o.jpg"
 #        print(startPos, endPos, zoom)
-        t = Tiles(startPos, endPos, deltas, zoom,filename,main=True)
+        t = Tiles(startPos, endPos, deltas, zoom,filename,dest_name,main=True)
     
         a = t.getImageCluster()
         a.save(filename)
         t.updateMap()
         t.resize()
+        t.add_stats_to_pic(stats.last_stats())
         print("Done 1")
         deltas = (2,2)
         zoom = 12
         
-        filename = "o2.png"
+        filename = "o2.jpg"
         t = Tiles(startPos, endPos, deltas, zoom,filename)
     
         a = t.getImageCluster()
         a.save(filename)
         t.updateMap()
         t.resize()
+        t.add_stats_to_pic(stats.last_stats())
         print("Done 2")
         
         deltas = (2,2)
         zoom = 7
         
-        filename = "o3.png"
+        filename = "o3.jpg"
         t = Tiles(startPos, endPos, deltas, zoom,filename)
     
         a = t.getImageCluster()
         a.save(filename)
         t.updateMap()
         t.resize()
+        t.add_stats_to_pic(stats.last_stats())
         print("Done 3")
-
-        
 
 if __name__ == '__main__':
     travel = Traveller()

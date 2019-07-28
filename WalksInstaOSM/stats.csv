@@ -1,2 +1,5 @@
-location,time,destination,distance_to,distance_total,distance_leg,sandwich_count,weather_type,weather_temp
-0,0,0,0,0,0,0,0,0,0
+lon,lat,time,destination,distance_to,distance_total,distance_leg,sandwich_count,weather_type,weather_temp
+-2.3572,51.3788,2019-07-28 12:37:14,Norfolk,344493.6,1080.5,1080.5,0,0,0
+-2.3572,51.3788,2019-07-28 13:36:50,Norfolk,344493.6,2161.0,1080.5,0,0,0
+-2.355543,51.386415,2019-07-28 13:37:41,Norfolk,343451.6,3319.8,1158.8,1,0,0
+-2.347554,51.390031,2019-07-28 14:09:27,Norfolk,342470.5,4454.5,1134.7,2,0,0
