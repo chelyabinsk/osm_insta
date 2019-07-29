@@ -11,6 +11,7 @@ import unicodedata
 from InstagramAPI import InstagramAPI
 import osm_tiles
 import hashtags
+import os
 
 
 class insta_bot():
@@ -43,10 +44,8 @@ def generate_caption():
 def main():
     # Read file with my login details
     tiles = osm_tiles.Traveller()
-    with open("/home/pirate/insta/login.txt","r") as f:
-        loginDetails = f.readlines()
-    # you may also want to remove whitespace characters like `\n` at the end of each line
-        loginDetails = [x.strip() for x in loginDetails]
+    
+    loginDetails = [os.environ['INSTA_USR'],os.environ['INSTA_PAS']]
 
     # Login into my account
     bot = insta_bot(loginDetails[0],loginDetails[1])
