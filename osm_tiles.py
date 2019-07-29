@@ -343,7 +343,7 @@ class Tiles():
     
     def resize(self):
         img = Image.open(self.filename)
-        img = img.resize((1080,1350))
+        img = img.thumbnail((1080,1350),Image.ANTIALIAS)
         img.save(self.filename)
         
 class Traveller():
