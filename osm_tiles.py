@@ -220,11 +220,6 @@ class Tiles():
         with open("history.csv", "r") as f:
             reader = csv.reader(f)
             hist = list(reader)
-#        if(len(hist) > 2000):
-#            new_list = hist[len(hist)-1000:]
-#            with open("history.csv","w") as f:
-#                writer = csv.writer(f, lineterminator="\n")
-#                writer.writerows(new_list)
         with open("history.csv", "a") as output:
             writer = csv.writer(output, lineterminator='\n')
             writer.writerows(steps)
@@ -343,7 +338,11 @@ class Tiles():
     
     def resize(self):
         img = Image.open(self.filename)
+<<<<<<< HEAD
+	img = img.thumbnail((1080,1350),Image.ANTIALIAS))
+=======
         img = img.thumbnail((1080,1350),Image.ANTIALIAS)
+>>>>>>> 9a24132321315c55416661b36cfe03d4ae7f5d9d
         img.save(self.filename)
         
 class Traveller():
