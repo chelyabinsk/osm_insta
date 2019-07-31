@@ -10,6 +10,9 @@ from time import gmtime, strftime
 class Stats():
     def __init__(self):
         # Read the current stats file
+        self.read_file()
+        
+    def read_file(self):
         with open("stats.csv", "r") as f:
             reader = csv.reader(f)
             stats = list(reader)
@@ -296,10 +299,10 @@ class Tiles():
                     self.lat_deg,
                     strftime("%Y-%m-%d %H:%M:%S", gmtime()),
                     self.dest_name,
-                    dirs[1][1],
-                    eval(stats.last_stats()[5]) + dirs[1][0],
-                    dirs[1][0],
-                    eval(stats.last_stats()[7]) + random.randint(0,1),
+                    dirs[1][1],  # Dist left
+                    eval(stats.last_stats()[5]) + dirs[1][0],  # Total dist traveled
+                    dirs[1][0],  # Dist this interval
+                    eval(stats.last_stats()[7]) + random.randint(0,1),  # Sadnwich
                     0,  # Weather type
                     0,  # Temperature
                     ]
@@ -338,7 +341,7 @@ class Tiles():
     
     def resize(self):
         img = Image.open(self.filename)
-        img.thumbnail((1080,1350),Image.ANTIALIAS))
+        img.thumbnail((1080,1350),Image.ANTIALIAS)
         img.save(self.filename)
         
 class Traveller():
@@ -424,10 +427,10 @@ class Traveller():
         filename = "o.jpg"
 #        print(startPos, endPos, zoom)
         t = Tiles(startPos, endPos, deltas, zoom,filename,dest_name,main=True)
-    
         a = t.getImageCluster()
         a.save(filename)
         t.updateMap()
+        stats.read_file()  # Read file again for latest info
         t.resize()
         t.add_stats_to_pic(stats.last_stats())
         print("Done 1")
