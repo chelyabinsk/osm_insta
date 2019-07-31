@@ -26,7 +26,7 @@ def get_size(start_path = '.'):
                 total_size += os.path.getsize(fp)
     return total_size
 
-@sched.scheduled_job('interval', minutes=1)
+@sched.scheduled_job('interval', minutes=20)
 def timed_job():
     main.main()
     clean_up_tiles()
