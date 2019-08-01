@@ -5,6 +5,9 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 
 sched = BlockingScheduler()
 
+cwd = os.getcwd()
+print("current path: {}".format(cwd))
+
 def clean_up_tiles():
     size = get_size("tiles")/1000000.0
     if(size > 50):
