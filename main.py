@@ -31,8 +31,6 @@ class insta_bot():
         self.api.uploadAlbum(media,caption=captionText)
 
 def generate_caption():
-    cwd = os.getcwd()
-    print("current path: {}".format(cwd))
     ht = hashtags.HashtagGrabber()
     # Get random word
     word = requests.get("https://randomwordgenerator.com/json/words.json").json()
@@ -44,6 +42,8 @@ def generate_caption():
     return caption
     
 def main():
+    cwd = os.getcwd()
+    print("current path: {}".format(cwd))
     # Read file with my login details
     tiles = osm_tiles.Traveller()
     
