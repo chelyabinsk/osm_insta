@@ -31,6 +31,8 @@ class insta_bot():
         self.api.uploadAlbum(media,caption=captionText)
 
 def generate_caption():
+    cwd = os.getcwd()
+    print("current path: {}".format(cwd))
     ht = hashtags.HashtagGrabber()
     # Get random word
     word = requests.get("https://randomwordgenerator.com/json/words.json").json()
