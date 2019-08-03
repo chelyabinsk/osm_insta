@@ -5,16 +5,6 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 
 sched = BlockingScheduler()
 
-print(os.environ["GDRIVE_BACKUP_FOLDER"])
-print(os.environ['GDRIVE_PROJ_ID'])
-print(os.environ["GDRIVE_PRIVKEY_ID"])
-print(os.environ["GDRIVE_PRIVKEY"])
-print(os.environ["GDRIVE_CLIENT_EMAIL"])
-print(os.environ["GDRIVE_CLIENT_ID"])
-print(os.environ["GDRIVE_CERT_URL"])
-print(os.environ["GDRIVE_FOLDERID"])
-print(os.environ["GDRIVE_BACKUP_FOLDER"])
-
 def clean_up_tiles():
     size = get_size("tiles")/1000000.0
     if(size > 50):
