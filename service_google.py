@@ -16,6 +16,7 @@ class GDrive():
         print("--------------------------222221!")
         self.SERVICE_ACCOUNT_FILE = credfile
         print("--------------------------222222!")
+        print(self.SERVICE_ACCOUNT_FILE)
         self.credentials = service_account.Credentials.from_service_account_file(
                 self.SERVICE_ACCOUNT_FILE, scopes=self.SCOPES)
         print("--------------------------222223!")
