@@ -12,6 +12,7 @@ from InstagramAPI import InstagramAPI
 import osm_tiles
 import hashtags
 import os
+from service_google import GDrive
 
 
 class insta_bot():
@@ -42,9 +43,11 @@ def generate_caption():
     return caption
     
 def main():
-    cwd = os.getcwd()
-    print("current path: {}".format(cwd))
-    # Read file with my login details
+    g = GDrive()
+    # Download files from Google drive
+    print("Downloading files")
+    a=g.download_files()
+    
     tiles = osm_tiles.Traveller()
     
     loginDetails = [os.environ['INSTA_USR'],os.environ['INSTA_PAS']]
@@ -53,4 +56,11 @@ def main():
     bot = insta_bot(loginDetails[0],loginDetails[1])
     caption = generate_caption()
     # Upload pictures
+    print("Uploading pictures to Instagram")
     bot.upload_pictures(["o.jpg","o2.jpg","o3.jpg"],caption)
+    
+    # Upload modified files to Google drive
+    print("Uploading files to GDrive")
+    g.upload_file("stats.csv")
+    g.upload_file("history.csv")
+    g.upload_file("destinations.csv")
