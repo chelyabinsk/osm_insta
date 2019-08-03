@@ -26,6 +26,7 @@ class GDrive():
                 "name":"Heroku Files",
                 'mimeType': 'application/vnd.google-apps.folder'
                 }
+        print("init done")
         
     def writeCredsJSON(self,filename):
         with open(filename,"r") as f:
