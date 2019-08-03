@@ -2,4 +2,4 @@ apscheduler==3.6.1
 requests==2.22.0
 pillow==6.1.0
 google-api-python-client==1.7.10
-google_auth_oauthlib==0.0.3
+google_auth_oauthlib
