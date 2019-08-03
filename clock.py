@@ -5,6 +5,8 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 
 sched = BlockingScheduler()
 
+print(os.environ["GDRIVE_BACKUP_FOLDER"])
+
 def clean_up_tiles():
     size = get_size("tiles")/1000000.0
     if(size > 50):
@@ -25,6 +27,8 @@ def get_size(start_path = '.'):
             if not os.path.islink(fp):
                 total_size += os.path.getsize(fp)
     return total_size
+
+main.main()
 
 @sched.scheduled_job('interval', minutes=20)
 def timed_job():
