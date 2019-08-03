@@ -13,15 +13,18 @@ class GDrive():
         credfile = "creds.json"
         self.writeCredsJSON(credfile)
         self.SCOPES = ['https://www.googleapis.com/auth/drive']
-        print("--------------------------111111!")
         self.SERVICE_ACCOUNT_FILE = credfile
-        print("--------------------------222223!")
         self.credentials = service_account.Credentials.from_service_account_file(
                 self.SERVICE_ACCOUNT_FILE, scopes=self.SCOPES)
+        print("--------------------------222223!")
         self.cleanJSON(credfile)
+        print("--------------------------222224!")
         self.service = build('drive', 'v3', credentials=self.credentials)
+        print("--------------------------222225!")
         self.folderid = os.environ["GDRIVE_FOLDERID"]
+        print("--------------------------222226!")
         self.historicfolder = os.environ["GDRIVE_BACKUP_FOLDER"]
+        print("--------------------------222227!")
         self.homeFolder = {
                 "kind" : "drive#file",
                 "id" : self.folderid, 
