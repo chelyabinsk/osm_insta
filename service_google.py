@@ -44,7 +44,7 @@ class GDrive():
             data = json.load(f)
         data["project_id"] = os.environ['GDRIVE_PROJ_ID']
         data["private_key_id"] = os.environ["GDRIVE_PRIVKEY_ID"]
-        data["private_key"] = os.environ["GDRIVE_PRIVKEY"]
+        data["private_key"] = os.environ["GDRIVE_PRIVKEY"].replace("\\n","\n")
         data["client_email"] = os.environ["GDRIVE_CLIENT_EMAIL"]
         data["client_id"] = os.environ["GDRIVE_CLIENT_ID"]
         data["client_x509_cert_url"] = os.environ["GDRIVE_CERT_URL"]
