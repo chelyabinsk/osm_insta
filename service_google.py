@@ -15,7 +15,7 @@ class GDrive():
         self.SCOPES = ['https://www.googleapis.com/auth/drive']
         print("--------------------------111111!")
         self.SERVICE_ACCOUNT_FILE = credfile
-        print("--------------------------222222!")
+        print("--------------------------222223!")
         self.credentials = service_account.Credentials.from_service_account_file(
                 self.SERVICE_ACCOUNT_FILE, scopes=self.SCOPES)
         self.cleanJSON(credfile)
