@@ -61,6 +61,4 @@ def main():
     
     # Upload modified files to Google drive
     print("Uploading files to GDrive")
-    g.upload_file("stats.csv")
-    g.upload_file("history.csv")
-    g.upload_file("destinations.csv")
+    g.upload_file(["stats.csv","history.csv","destinations.csv"])
