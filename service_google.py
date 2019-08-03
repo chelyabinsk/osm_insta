@@ -49,6 +49,7 @@ class GDrive():
         data["client_id"] = os.environ["GDRIVE_CLIENT_ID"]
         data["client_x509_cert_url"] = os.environ["GDRIVE_CERT_URL"]
         print("daaaaaaaata {}".format(data["private_key"]))
+        print("daaaaaaaata {}".format(data))
         with open(filename, 'w') as f:
             json.dump(data, f)
     
