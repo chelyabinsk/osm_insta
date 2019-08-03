@@ -5,17 +5,6 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 
 sched = BlockingScheduler()
 
-cwd = os.getcwd()
-# define the name of the directory to be created
-path = "{}/year".format(cwd)
-
-try:
-    os.mkdir(path)
-except OSError:
-    print ("Creation of the directory %s failed" % path)
-else:
-    print ("Successfully created the directory %s " % path)
-
 def clean_up_tiles():
     size = get_size("tiles")/1000000.0
     if(size > 50):
