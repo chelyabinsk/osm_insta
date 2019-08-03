@@ -17,6 +17,10 @@ class GDrive():
         self.SERVICE_ACCOUNT_FILE = credfile
         print("--------------------------222222!")
         print(self.SERVICE_ACCOUNT_FILE)
+        
+        with open(self.SERVICE_ACCOUNT_FILE,"r") as f:
+            data = json.load(f)
+        print(data)
         self.credentials = service_account.Credentials.from_service_account_file(
                 self.SERVICE_ACCOUNT_FILE, scopes=self.SCOPES)
         print("--------------------------222223!")
