@@ -323,7 +323,7 @@ class Tiles():
         font = ImageFont.truetype("fonts/adventpro-regular.ttf", 65)
         step_size = 58
         # draw.text((x, y),"Sample Text",(r,g,b))
-        text = "Location: {}, {}".format(data[0],data[1])
+        text = "Location: {}, {}".format(data[1],data[0])
         draw.text((0, 0),text,(0,0,0),font=font)
         text = "Datetime: {}".format(data[2])
         draw.text((0, step_size),text,(0,0,0),font=font)
