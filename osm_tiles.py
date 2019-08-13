@@ -116,6 +116,7 @@ class Tiles():
                     filepath = "tiles/{}_{}.jpg".format(xtile,ytile)
                     # Check if tile already exists
                     if(not os.path.isfile(filepath)):
+                        print("Downloading image: {}".format(imgurl))
                         # Download the tile
                         response = requests.get(imgurl,headers=headers)
                         if response.status_code == 200:
