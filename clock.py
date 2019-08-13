@@ -3,8 +3,9 @@ import os,shutil
 
 from apscheduler.schedulers.blocking import BlockingScheduler
 
-sched = BlockingScheduler()
 main.main()
+sched = BlockingScheduler()
+
 
 def clean_up_tiles():
     size = get_size("tiles")/1000000.0
