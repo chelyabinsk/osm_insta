@@ -58,6 +58,7 @@ def main():
     # Upload pictures
     print("Uploading pictures to Instagram")
     bot.upload_pictures(["o.jpg","o2.jpg","o3.jpg"],caption)
+    print("Caption: {}".format(caption))
     
     # Upload modified files to Google drive
     print("Uploading files to GDrive")
