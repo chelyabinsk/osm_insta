@@ -2,7 +2,6 @@ import main
 import os,shutil
 
 from apscheduler.schedulers.blocking import BlockingScheduler
-print("HIIIIIIIIIIIIIII")
 main.main()
 sched = BlockingScheduler()
 
