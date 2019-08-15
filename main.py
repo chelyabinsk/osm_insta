@@ -12,6 +12,7 @@ from InstagramAPI import InstagramAPI
 import osm_tiles
 import hashtags
 import os
+import random
 from service_google import GDrive
 
 
@@ -55,6 +56,8 @@ def main():
     # Login into my account
     bot = insta_bot(loginDetails[0],loginDetails[1])
     caption = generate_caption()
+    if(random.random() > 1.0/3.0):
+        caption = "I don't know where I'm going. Pls send help. Ta."
     # Upload pictures
     print("Uploading pictures to Instagram")
     bot.upload_pictures(["o.jpg","o2.jpg","o3.jpg"],caption)
