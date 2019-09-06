@@ -5,7 +5,8 @@ import os
 import csv
 import urllib.parse
 import random
-from time import gmtime, strftime
+from time import gmtime, strftime, sleep
+import itertools
 
 class Stats():
     def __init__(self):
@@ -38,10 +39,12 @@ class Stats():
                 writer.writerows(hist[len(hist)-1000:])
         if(len(self.stats) > 1010):
             with open("stats.csv","w") as f:
-                writer = csv.writer(self.stats[len(self.stats)-1000:])
+                writer = csv.writer(f,lineterminator="\n")
+                writer.writerows(self.stats[len(self.stats)-1000:])
+                
 
 class Tiles():
-    def __init__(self, startPos, endPos, deltas, zoom,filename,dest_name="",main=False):
+    def __init__(self, startPos, endPos, deltas, zoom,filename,dest_name="",main=False,dest_hist=[]):
         # Initialise positional parameters
         self.dest_name = dest_name
         self.lat_deg, self.lon_deg = startPos
@@ -50,6 +53,7 @@ class Tiles():
         self.zoom = zoom
         self.filename = filename
         self.is_main = main
+        self.hist_dest = dest_hist
     def deg2num(self, lat_deg, lon_deg, zoom):
       lat_rad = math.radians(lat_deg)
       n = 2.0 ** zoom
@@ -116,14 +120,17 @@ class Tiles():
                     filepath = "tiles/{}_{}.jpg".format(xtile,ytile)
                     # Check if tile already exists
                     if(not os.path.isfile(filepath)):
-                        print("Downloading image: {}".format(imgurl))
-                        # Download the tile
-                        response = requests.get(imgurl,headers=headers)
-                        if response.status_code == 200:
-                            with open(filepath, 'wb') as f:
-                                f.write(response.content)
-                        else:
-                            print("[{}] Can't download tile {}".format(response.status_code,imgurl))
+                        #print("Downloading image: {}".format(imgurl))
+                        # Download the tile (try 3 times)
+                        for i_ in range(3):
+                            response = requests.get(imgurl,headers=headers)
+                            if response.status_code == 200:
+                                with open(filepath, 'wb') as f:
+                                    f.write(response.content)
+                                break
+                            else:
+                                print("[{}] Can't download tile {}".format(response.status_code,imgurl))
+                                sleep(4)  # Wait for a bit and try again
                     else:
                         pass
                     
@@ -178,10 +185,25 @@ class Tiles():
             else:
                 point2 = points[i+1]
                 x2,y2 = self.longlat2pixel([float(point2[0]),float(point2[1])])
-                draw.line((x,y)+(x2,y2), width=5, fill=(255,50,200))
+                if(param == 0):
+                    draw.line((x,y)+(x2,y2), width=5, fill=(255,50,200))
+                else:
+                    draw.line((x,y)+(x2,y2), width=5, fill=(200,75,255))
         #draw.line(self.longlat2pixel((51.3821, -2.3578+0.001)) + self.longlat2pixel((51.3821, -2.3578)), width=5, fill=(0,0,255,100))
         img.save(mapname)
-        
+    
+    def draw_old_destinations(self):
+        """
+        Function to draw all of the old destinations on the map
+        """
+        if(len(self.hist_dest) > 1):
+            img = Image.open(self.filename)
+            draw = ImageDraw.Draw(img)
+            for dest in self.hist_dest:
+                x,y = self.longlat2pixel((float(dest[1]),float(dest[2])))
+                draw.ellipse((x-10,y-10,x+10,y+10),width = 5, outline = (100,100,100))
+                img.save(self.filename)
+    
     def draw_destination_direction(self):
         """
         Function to draw end point on the map
@@ -191,18 +213,9 @@ class Tiles():
         img = Image.open(self.filename)
         draw = ImageDraw.Draw(img)
         
-        # Check whether end point is visible on the map
-        if(self.end_lat > self.lat_deg - self.delta_lat and 
-           self.end_lat < self.lat_deg + self.delta_lat):
-            # Visible
-            # Highlight that point on the map
-            x,y = self.longlat2pixel((self.end_lat,self.end_lon))
-#            print(x,y)
-            draw.ellipse((x-20,y-20,x+20,y+20),width = 10, outline = (255,74,90))
-        else:
-            # Not visible
-            # Draw an arrow towards the destination
-            pass
+        # Highlight that point on the map
+        x,y = self.longlat2pixel((self.end_lat,self.end_lon))
+        draw.ellipse((x-20,y-20,x+20,y+20),width = 10, outline = (255,74,90))
         img.save(self.filename)
         
     def drawPointOnMap(self,point):
@@ -219,11 +232,24 @@ class Tiles():
         draw = ImageDraw.Draw(img)
         draw.line((x,y)+(x+1,y),width=10,fill=(0,0,0))
         
+    def deduplist(self,in_list):
+        # Function to de-duplicate list of lists
+        return list(in_list for in_list,_ in itertools.groupby(in_list))
+        
     def updateHistoricFile(self, steps):
         # Update historic travels file
-        with open("history.csv", "r") as f:
-            reader = csv.reader(f)
-            hist = list(reader)
+        
+        # Will remove this after historic file has been cleaned
+#        with open("history.csv", "r") as f:
+#            reader = csv.reader(f)
+#            hist = list(reader) 
+#        hist = self.deduplist(hist)
+#        with open("history.csv","w") as f:
+#            writer = csv.writer(f, lineterminator='\n')
+#            writer.writerows(hist)
+        # Remove up to here
+        
+        steps = self.deduplist(steps)
         with open("history.csv", "a") as output:
             writer = csv.writer(output, lineterminator='\n')
             writer.writerows(steps)
@@ -290,6 +316,8 @@ class Tiles():
         if(self.is_main):
             # Append the historic file
             self.updateHistoricFile(dirs[0])       
+        # Annotate historic end goals on the map
+        self.draw_old_destinations()
         # Annotate end goal on the map
         self.draw_destination_direction()
         # Add other fun stats 
@@ -330,9 +358,15 @@ class Tiles():
         draw.text((0, step_size),text,(0,0,0),font=font)
         text = "Destination: {}".format(data[3])
         draw.text((0, step_size*2),text,(0,0,0),font=font)
-        text = "Distance to go: {}m".format(round(eval(data[4]),1))
+        
+        dist_to_go = eval(data[4])
+        if(dist_to_go < 1100):
+            text = "Distance to go: {}m".format(round(dist_to_go),1)
+        else:
+            text = "Distance to go: {}Km".format(round(dist_to_go/1000,2))
+            
         draw.text((0, step_size*3),text,(0,0,0),font=font)
-        text = "Distance traveled (total): {}m".format(round(eval(data[5]),1))
+        text = "Distance traveled (total): {}Km".format(round(eval(data[5])/1000,2))
         draw.text((0, step_size*4),text,(0,0,0),font=font)
         text = "Distance traveled (this interval): {}m".format(round(eval(data[6]),1))
         draw.text((0, step_size*5),text,(0,0,0),font=font)
@@ -427,7 +461,7 @@ class Traveller():
         zoom = 14        
         filename = "o.jpg"
 #        print(startPos, endPos, zoom)
-        t = Tiles(startPos, endPos, deltas, zoom,filename,dest_name,main=True)
+        t = Tiles(startPos, endPos, deltas, zoom,filename,dest_name=dest_name,main=True,dest_hist=dest)
         a = t.getImageCluster()
         a.save(filename)
         t.updateMap()
@@ -439,7 +473,7 @@ class Traveller():
         zoom = 12
         
         filename = "o2.jpg"
-        t = Tiles(startPos, endPos, deltas, zoom,filename)
+        t = Tiles(startPos, endPos, deltas, zoom,filename,dest_hist=dest)
     
         a = t.getImageCluster()
         a.save(filename)
@@ -452,7 +486,7 @@ class Traveller():
         zoom = 7
         
         filename = "o3.jpg"
-        t = Tiles(startPos, endPos, deltas, zoom,filename)
+        t = Tiles(startPos, endPos, deltas, zoom,filename,dest_hist=dest)
     
         a = t.getImageCluster()
         a.save(filename)
